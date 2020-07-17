@@ -21,7 +21,7 @@ Most code is in the Program.cs, and the data structure is in `public struct Haie
 
 * I do already know the power modes, but forgot to include, will do later
 * Network Scanner will only work on Windows, alternatively you can check the IP/mac on the router
-* It does NOT control anything
+* It does NOT control anything (yet :P)
 * Many things of the data structure is unknown, but hopefully all what is displayed is correct
 * It loses the connection EVERY 15 seconds, looks like it might be some ReceiveTimeout, but cannot get it working, if you can, please help! :) Also might be that we need a keepalive command every 10 seconds or so to let the airco know we are still listening.
 
