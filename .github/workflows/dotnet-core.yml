@@ -2,9 +2,9 @@ name: Continuous Integration
 
 on:
   push:
-    branches: [ master ]
-  pull_request:
-    branches: [ master ]
+    # Sequence of patterns matched against refs/tags
+    tags:
+      - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
 
 jobs:
   build:
@@ -60,10 +60,12 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: ${{ github.sha }}
-        release_name: HaierAC ${{ github.sha }}
+        tag_name: ${{ github.ref }}
+        release_name: OpenDirectoryDownloader ${{ github.ref }}
         draft: false
         prerelease: false
+        allowUpdates: true
+        body: ${{ github.event.head_commit.message }}
 
     - name: Upload Release Asset win-x64
       uses: actions/upload-release-asset@v1.0.1
