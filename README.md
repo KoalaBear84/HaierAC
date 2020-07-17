@@ -25,3 +25,7 @@ Most code is in the Program.cs, and the data structure is in `public struct Haie
 * It loses the connection EVERY 15 seconds, looks like it might be some ReceiveTimeout, but cannot get it working, if you can, please help! :) Also might be that we need a keepalive command every 10 seconds or so to let the airco know we are still listening.
 
 If you can help in any way, even just let it run and gather state changes could be of help. This way we can get all the possibilities.
+
+## Screenshot
+
+![Screenshot](Screenshot01.png)
