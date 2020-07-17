@@ -7,7 +7,7 @@ Hardware used:
 
 ## Getting Started
 
-1. When started for the first time, this tool will scan your local network (only last number 1.2.3.x) for devices listening to port 56800.
+1. When started for the first time, this tool will scan your local network (only last number 1.2.3.x) for devices listening to port 56800. (So you need to have it connected to WiFi with the official app first)
 2. Fill in the correct airco IP and MAC Address (currently not used)
 3. Restart tool
 
