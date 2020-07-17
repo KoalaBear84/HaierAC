@@ -37,7 +37,7 @@ jobs:
         dest: HaierAC-win-x64.zip
 
     - name: Publish with dotnet linux-x64
-      run: dotnet publish HaierAC --configuration Release --framework netcoreapp3.1 --runtime linux-x64 --no-self-contained --output ./HaierAC-linux-x64
+      run: dotnet publish --configuration Release --framework netcoreapp3.1 --runtime linux-x64 --no-self-contained --output ./HaierAC-linux-x64
 
     - name: Zipping linux-x64
       uses: papeloto/action-zip@v1
@@ -46,7 +46,7 @@ jobs:
         dest: HaierAC-linux-x64.zip
 
     - name: Publish with dotnet osx-x64
-      run: dotnet publish HaierAC --configuration Release --framework netcoreapp3.1 --runtime osx-x64 --no-self-contained --output ./HaierAC-osx-x64
+      run: dotnet publish --configuration Release --framework netcoreapp3.1 --runtime osx-x64 --no-self-contained --output ./HaierAC-osx-x64
 
     - name: Zipping osx-x64
       uses: papeloto/action-zip@v1
