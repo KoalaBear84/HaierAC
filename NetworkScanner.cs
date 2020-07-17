@@ -60,7 +60,7 @@ namespace HaierAC
                                     MacAddress = macAddress
                                 });
 
-                                Console.WriteLine($"Found Airco: {ip}, {macAddress}");
+                                Console.WriteLine($"Found Airco: {ip}, {macAddress.Replace("-", ":").ToUpper()}");
                             }
                         }
                     }
