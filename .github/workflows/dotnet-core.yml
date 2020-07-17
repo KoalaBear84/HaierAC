@@ -1,0 +1,100 @@
+name: Continuous Integration
+
+on:
+  push:
+    # Sequence of patterns matched against refs/tags
+    tags:
+      - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
+
+jobs:
+  build:
+
+    runs-on: windows-latest
+
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: 1
+      
+    steps:
+    - uses: actions/checkout@v2
+    - name: Setup .NET Core
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: 3.1.101
+    - name: Install dependencies
+      run: dotnet restore
+    - name: Build
+      run: dotnet build --configuration Release --no-restore
+    - name: Test
+      run: dotnet test --no-restore --verbosity normal
+
+    - name: Publish with dotnet win-x64
+      run: dotnet publish --configuration Release --framework netcoreapp3.1 --runtime win-x64 --no-self-contained --output ./HaierAC-win-x64
+
+    - name: Zipping win-x64
+      uses: papeloto/action-zip@v1
+      with:
+        files: ./HaierAC-win-x64
+        dest: HaierAC-win-x64.zip
+
+    - name: Publish with dotnet linux-x64
+      run: dotnet publish --configuration Release --framework netcoreapp3.1 --runtime linux-x64 --no-self-contained --output ./HaierAC-linux-x64
+
+    - name: Zipping linux-x64
+      uses: papeloto/action-zip@v1
+      with:
+        files: ./HaierAC-linux-x64
+        dest: HaierAC-linux-x64.zip
+
+    - name: Publish with dotnet osx-x64
+      run: dotnet publish --configuration Release --framework netcoreapp3.1 --runtime osx-x64 --no-self-contained --output ./HaierAC-osx-x64
+
+    - name: Zipping osx-x64
+      uses: papeloto/action-zip@v1
+      with:
+        files: ./HaierAC-osx-x64
+        dest: HaierAC-osx-x64.zip
+
+    - name: Create release
+      id: create_release
+      uses: actions/create-release@v1.0.0
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: OpenDirectoryDownloader ${{ github.ref }}
+        draft: false
+        prerelease: false
+        allowUpdates: true
+        body: ${{ github.event.head_commit.message }}
+
+    - name: Upload Release Asset win-x64
+      uses: actions/upload-release-asset@v1.0.1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./HaierAC-win-x64.zip
+        asset_name: HaierAC-win-x64.zip
+        asset_content_type: application/zip
+
+    - name: Upload Release Asset linux-x64
+      uses: actions/upload-release-asset@v1.0.1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./HaierAC-linux-x64.zip
+        asset_name: HaierAC-linux-x64.zip
+        asset_content_type: application/zip
+        
+
+    - name: Upload Release Asset osx-x64
+      id: upload-release-asset
+      uses: actions/upload-release-asset@v1.0.1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./HaierAC-osx-x64.zip
+        asset_name: HaierAC-osx-x64.zip
+        asset_content_type: application/zip
