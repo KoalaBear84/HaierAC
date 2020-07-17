@@ -31,3 +31,12 @@ If you can help in any way, even just let it run and gather state changes could 
 ## Screenshot
 
 ![Screenshot](Screenshot01.png)
+
+## Other resources
+
+* https://github.com/instalator/Haier_WiFi/ (Blog: https://blog.instalator.ru/archives/433)
+  https://github.com/instalator/Haier_WiFi/blob/master/mqtt_esp8266_haier.ino
+* https://github.com/bstuff/haier-ac-remote
+* https://community.home-assistant.io/t/haier-ac-integration/193002
+* https://community.home-assistant.io/t/haier-air-conditioner/25468
+* https://community.home-assistant.io/t/esp-haier-haier-air-conditioner-esp-home-wemos-d1-mini/127880
