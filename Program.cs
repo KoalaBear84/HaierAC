@@ -97,7 +97,8 @@ namespace HaierAC
                             //Log($"MacAddress: {new string(haierResponse.MacAddress)}");
                             Log($"PoweredOn: {haierResponse.PoweredOn}");
                             Log($"Purify: {haierResponse.Purify}");
-                            Log($"FanSpeed: {Enum.GetName(typeof(FanSpeed), haierResponse.FanSpeed)} [{ConvertToBinary(haierResponse._FanSpeed)}]");
+                            Log($"FanSpeed: {Enum.GetName(typeof(FanSpeed), haierResponse.FanSpeed)} [{ConvertToBinary(haierResponse._FanSpeedAndOperationMode)}]");
+                            Log($"OperationMode: {Enum.GetName(typeof(OperationMode), haierResponse.OperationMode)}");
 
                             Console.Title = $"{(haierResponse.PoweredOn ? "✔" : "❌")} {haierResponse.RoomTemperature}° 🡆 {haierResponse.Temperature}° @ {Enum.GetName(typeof(FanSpeed), haierResponse.FanSpeed)} | Haier Airco! {DateTime.Now:HH:mm}";
 
@@ -283,28 +284,77 @@ namespace HaierAC
         public bool FlowUpDown => Parser.HasMask(_FlowUpDown, Constants.FlowUpDown);
 
         // 94
-        public byte _FanSpeed;
+        public byte _FanSpeedAndOperationMode;
 
+        // Looks like they use the last 4 (or first 4?) from this byte (94)
+        // Low to Auto:  Byte 94 changed from 35 [xxx00011] -> 37 [xxx00101]
+        // High to Auto: Byte 94 changed from 33 [xxx00001] -> 37 [xxx00101]
+        // Auto to Low:  Byte 94 changed from 37 [xxx00101] -> 35 [xxx00011]
+        // Low to Mid:   Byte 94 changed from 35 [xxx00011] -> 34 [xxx00010]
+        // Mid to High:  Byte 94 changed from 34 [xxx00010] -> 33 [xxx00001]
         public FanSpeed FanSpeed
         {
             get
             {
                 FanSpeed fanSpeed = FanSpeed.Unknown;
 
-                if (Parser.IsBitSet(_FanSpeed, 0) && Parser.IsBitSet(_FanSpeed, 1))
+                // If anybody know a better way..
+                if (Parser.IsBitSet(_FanSpeedAndOperationMode, 0) && !Parser.IsBitSet(_FanSpeedAndOperationMode, 1) && Parser.IsBitSet(_FanSpeedAndOperationMode, 2))
+                {
+                    fanSpeed = FanSpeed.Auto;
+                }
+                else if (Parser.IsBitSet(_FanSpeedAndOperationMode, 0) && Parser.IsBitSet(_FanSpeedAndOperationMode, 1) && !Parser.IsBitSet(_FanSpeedAndOperationMode, 2))
                 {
                     fanSpeed = FanSpeed.Low;
                 }
-                else if (!Parser.IsBitSet(_FanSpeed, 0) && Parser.IsBitSet(_FanSpeed, 1))
+                else if (!Parser.IsBitSet(_FanSpeedAndOperationMode, 0) && Parser.IsBitSet(_FanSpeedAndOperationMode, 1) && !Parser.IsBitSet(_FanSpeedAndOperationMode, 2))
                 {
                     fanSpeed = FanSpeed.Medium;
                 }
-                else if (Parser.IsBitSet(_FanSpeed, 0))
+                else if (Parser.IsBitSet(_FanSpeedAndOperationMode, 0) && !Parser.IsBitSet(_FanSpeedAndOperationMode, 1) && !Parser.IsBitSet(_FanSpeedAndOperationMode, 2))
                 {
                     fanSpeed = FanSpeed.High;
                 }
 
                 return fanSpeed;
+            }
+        }
+
+        // Looks like they use the first 3 (or last 3?) from this byte (94)
+        // Cool.  Byte 94 changed from 5   [000xxxxx] -> 37  [001xxxxx]
+        // Heat.  Byte 94 changed from 34  [001xxxxx] -> 130 [100xxxxx]
+        // Dry.   Byte 94 changed from 130 [100xxxxx] -> 66  [010xxxxx]
+        // Fan.   Byte 94 changed from 66  [010xxxxx] -> 194 [110xxxxx]
+        // Smart. Byte 94 changed from 194 [110xxxxx] -> 5   [000xxxxx]
+        public OperationMode OperationMode
+        {
+            get
+            {
+                OperationMode operationMode = OperationMode.Unknown;
+
+                // If anybody know a better way..
+                if (!Parser.IsBitSet(_FanSpeedAndOperationMode, 7) && !Parser.IsBitSet(_FanSpeedAndOperationMode, 6) && Parser.IsBitSet(_FanSpeedAndOperationMode, 5))
+                {
+                    operationMode = OperationMode.Cool;
+                }
+                else if (Parser.IsBitSet(_FanSpeedAndOperationMode, 7) && !Parser.IsBitSet(_FanSpeedAndOperationMode, 6) && !Parser.IsBitSet(_FanSpeedAndOperationMode, 5))
+                {
+                    operationMode = OperationMode.Heat;
+                }
+                else if (!Parser.IsBitSet(_FanSpeedAndOperationMode, 7) && Parser.IsBitSet(_FanSpeedAndOperationMode, 6) && !Parser.IsBitSet(_FanSpeedAndOperationMode, 5))
+                {
+                    operationMode = OperationMode.Dry;
+                }
+                else if (Parser.IsBitSet(_FanSpeedAndOperationMode, 7) && Parser.IsBitSet(_FanSpeedAndOperationMode, 6) && !Parser.IsBitSet(_FanSpeedAndOperationMode, 5))
+                {
+                    operationMode = OperationMode.Fan;
+                }
+                else if (!Parser.IsBitSet(_FanSpeedAndOperationMode, 7) && !Parser.IsBitSet(_FanSpeedAndOperationMode, 6) && !Parser.IsBitSet(_FanSpeedAndOperationMode, 5))
+                {
+                    operationMode = OperationMode.Smart;
+                }
+
+                return operationMode;
             }
         }
 
