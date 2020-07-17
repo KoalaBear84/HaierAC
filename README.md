@@ -19,7 +19,7 @@ Most code is in the Program.cs, and the data structure is in `public struct Haie
 
 ## Known Issues
 
-* I do already know the power modes, but forgot to include, will do later
+* When changing modes, the temperature value drops (a couple of degress, haven't checked it out further) in the first reponse, and will correct itself the next message/connect, why..?
 * Network Scanner will only work on Windows, alternatively you can check the IP/mac on the router
 * It does NOT control anything (yet :P)
 * Many things of the data structure is unknown, but hopefully all what is displayed is correct
