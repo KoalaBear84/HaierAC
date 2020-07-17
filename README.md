@@ -7,7 +7,7 @@ Hardware used:
 
 ## Getting Started
 
-1. When started for the first time, this tool will scan your local network (only last number 1.2.3.x) for devices listening to port 56800.
+1. When started for the first time, this tool will scan your local network (only last number 1.2.3.x) for devices listening to port 56800. (So you need to have it connected to WiFi with the official app first)
 2. Fill in the correct airco IP and MAC Address (currently not used)
 3. Restart tool
 
@@ -19,9 +19,14 @@ Most code is in the Program.cs, and the data structure is in `public struct Haie
 
 ## Known Issues
 
+* I do already know the power modes, but forgot to include, will do later
 * Network Scanner will only work on Windows, alternatively you can check the IP/mac on the router
-* It does NOT control anything
+* It does NOT control anything (yet :P)
 * Many things of the data structure is unknown, but hopefully all what is displayed is correct
 * It loses the connection EVERY 15 seconds, looks like it might be some ReceiveTimeout, but cannot get it working, if you can, please help! :) Also might be that we need a keepalive command every 10 seconds or so to let the airco know we are still listening.
 
 If you can help in any way, even just let it run and gather state changes could be of help. This way we can get all the possibilities.
+
+## Screenshot
+
+![Screenshot](Screenshot01.png)
