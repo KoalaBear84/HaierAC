@@ -90,13 +90,15 @@ namespace HaierAC
                             HaierResponse haierResponse = Parser.BytesToStruct<HaierResponse>(receivedBytes);
                             Log($"_Temperature: {haierResponse.Temperature} [{haierResponse._Temperature}]");
                             Log($"_RoomTemperature: {haierResponse.RoomTemperature} [{haierResponse._RoomTemperature}] {ConvertToBinary(haierResponse._RoomTemperature)}");
-                            Log($"FlowDown: {haierResponse.FlowDownOrHighPowerMode}");
-                            Log($"Quiet: {haierResponse.Quiet}");
-                            Log($"_FlowUpDown: {haierResponse.FlowUpDown} [{haierResponse._FlowUpDown}] [{ConvertToBinary(haierResponse._FlowUpDown)}]");
-                            Log($"_FlowLeftRight: {haierResponse.FlowLeftRight} [{haierResponse._FlowLeftRight}] [{ConvertToBinary(haierResponse._FlowLeftRight)}]");
+                            Log($"FlowDown: {haierResponse.FlowDown}, FlowUp: {haierResponse.FlowUp}, FlowUpSmall: {haierResponse.FlowUpSmall}");
+                            Log($"FlowUpDown (Swing): {haierResponse.FlowUpDown} [{haierResponse._FlowUpDown}] [{ConvertToBinary(haierResponse._FlowUpDown)}]");
+                            Log($"FlowLeftRight: {haierResponse.FlowLeftRight} [{haierResponse._FlowLeftRight}] [{ConvertToBinary(haierResponse._FlowLeftRight)}]");
                             //Log($"MacAddress: {new string(haierResponse.MacAddress)}");
+                            Log($"Quiet: {haierResponse.Quiet}");
                             Log($"PoweredOn: {haierResponse.PoweredOn}");
-                            Log($"Purify: {haierResponse.Purify}");
+                            Log($"PowerMode: {haierResponse.PowerMode}");
+                            Log($"Purify/Health: {haierResponse.PurifyHealth}, LightsOn: {haierResponse.LightsOn}");
+                            Log($"TimerSleep: {haierResponse.TimerSleep}");
                             Log($"FanSpeed: {Enum.GetName(typeof(FanSpeed), haierResponse.FanSpeed)} [{ConvertToBinary(haierResponse._FanSpeedAndOperationMode)}]");
                             Log($"OperationMode: {Enum.GetName(typeof(OperationMode), haierResponse.OperationMode)}");
 
@@ -144,6 +146,9 @@ namespace HaierAC
                             LastState = receivedBytes;
                         }
                     }
+
+                    //byte[] pollingCommand = Parser.HexStringToBytes(Commands.Polling);
+                    //await SendCommandAsync(client, pollingCommand);
                 }
             };
             asyncTcpClient.Message += AsyncTcpClient_Message;
@@ -156,8 +161,9 @@ namespace HaierAC
 
         private static async Task SendCommandAsync(AsyncTcpClient asyncTcpClient, byte[] command)
         {
-            byte crc = GetCrc(command);
-            await asyncTcpClient.Send(Combine(command, new byte[] { crc }));
+            await asyncTcpClient.Send(command);
+            byte[] crc = new byte[] { GetCrc(command) };
+            await asyncTcpClient.Send(crc);
         }
 
         private static byte[] Combine(params byte[][] arrays)
@@ -276,12 +282,18 @@ namespace HaierAC
         public byte _Temperature;
         public int Temperature => _Temperature + 16;
 
-        // 02_00000010 == ???
-        // 03_00000011 == ???
-        // 12_00001100 == Flow Up Down
         // 93
         public byte _FlowUpDown;
         public bool FlowUpDown => Parser.HasMask(_FlowUpDown, Constants.FlowUpDown);
+
+        //  Byte 93 changed from 12 [00001100] -> 3 [00000011]
+        public bool FlowDown => Parser.IsBitSet(_FlowUpDown, 0) && Parser.IsBitSet(_FlowUpDown, 1);
+
+        // Byte 93 changed from 3 [00000011] -> 1 [00000001]
+        public bool FlowUp => Parser.IsBitSet(_FlowUpDown, 0) && !Parser.IsBitSet(_FlowUpDown, 1);
+
+        // Byte 93 changed from 3 [00000011] -> 2 [00000010]
+        public bool FlowUpSmall => !Parser.IsBitSet(_FlowUpDown, 0) && Parser.IsBitSet(_FlowUpDown, 1);
 
         // 94
         public byte _FanSpeedAndOperationMode;
@@ -358,16 +370,24 @@ namespace HaierAC
             }
         }
 
-        // 95/96
-        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 2)]
-        public byte[] Unused95_96;
+        // 95
+        public byte Unused95;
+
+        // 96
+        // Byte 96 changed from 2 [00000010] -> 0 [00000000]
+        public byte Display;
+        public bool LightsOn => Parser.IsBitSet(Display, 1);
 
         // 97
         public byte _PoweredOn;
         public bool PoweredOn => Parser.IsBitSet(_PoweredOn, 0);
-        public bool Purify => Parser.IsBitSet(_PoweredOn, 1);
-        public bool FlowDownOrHighPowerMode => Parser.IsBitSet(_PoweredOn, 4);
-        public bool Quiet => Parser.IsBitSet(_PoweredOn, 5);
+        public bool PurifyHealth => Parser.IsBitSet(_PoweredOn, 1);
+        public bool Quiet => Parser.IsBitSet(_PoweredOn, 4);
+
+        // Byte 97 changed from 1 [00000001] -> 9 [00001001]
+        public bool PowerMode => Parser.IsBitSet(_PoweredOn, 3);
+        // Byte 97 changed from 1 [00000001] -> 33 [00100001]
+        public bool TimerSleep => Parser.IsBitSet(_PoweredOn, 5);
 
         // 98
         public byte Unused98;
@@ -387,7 +407,7 @@ namespace HaierAC
         // 103
         public byte Unused103;
 
-        // 104
+        // 104, Humidity??
         // 0_00000000 --> 79_01001111
         // 0_00000000 --> 80_01010000
         // 0_00000000 --> 81_01010001
@@ -404,7 +424,6 @@ namespace HaierAC
 
         // 107
         // 3_00000011 --> 1_00000001
-        // 0_00000000 --> 3_00000011
         // 1_00000001 --> 3_00000011
         public byte Unknown_107;
 
@@ -428,6 +447,7 @@ namespace HaierAC
         public const string On = "ff ff 0a 00 00 00 00 00 00 01 4d 02 5a ";
         public const string Off = "ff ff 0a 00 00 00 00 00 00 01 4d 03 5b ";
         public const string Init = "ff ff 08 00 00 00 00 00 00 73 7b ";
+        public const string Polling = "ff ff 0a 00 00 00 00 00 01 01 4d 01 5a ";
     }
 
     public class Constants
