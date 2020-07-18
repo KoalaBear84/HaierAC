@@ -5,6 +5,11 @@ Hardware used:
 * Unit: Haier Tundra 2.0 Single-split Airconditioning set - 5,0 kW
 * Wifi: Official Haier USB Wi-Fi module (KZW-W002)
 
+## Currently
+
+* Trying to understand the unknown bytes (104, humidity?) and 107, I added some values in the source
+* Trying to control it, but it disconnects immediately when I try, so must be something with checksum, or my C# socket implementation
+
 ## Getting Started
 
 1. When started for the first time, this tool will scan your local network (only last number 1.2.3.x) for devices listening to port 56800. (So you need to have it connected to WiFi with the official app first)
@@ -19,12 +24,10 @@ Most code is in the Program.cs, and the data structure is in `public struct Haie
 
 ## Known Issues
 
-* When changing modes, the temperature value drops (a couple of degress, haven't checked it out further) in the first reponse, and will correct itself the next message/connect, why..?
 * Network Scanner will only work on Windows, alternatively you can check the IP/mac on the router
 * It does NOT control anything (yet :P)
-* Many things of the data structure is unknown, but hopefully all what is displayed is correct
+* Some things of the data structure is unknown, but hopefully all what is displayed is correct, please verify!
 * It loses the connection EVERY 15 seconds, looks like it might be some ReceiveTimeout, but cannot get it working, if you can, please help! :) Also might be that we need a keepalive command every 10 seconds or so to let the airco know we are still listening. In this file there is a 'polling' command every ~5 seconds: https://github.com/instalator/Haier_WiFi/blob/master/mqtt_esp8266_haier.ino
-* Currently first trying to understand all the bytes from the app, which it now mostly can understand/read, then trying to send state changes ourselves (control it), and then add some commands only available with the supplied remote.
 
 If you can help in any way, even just let it run and gather state changes could be of help. This way we can get all the possibilities.
 
