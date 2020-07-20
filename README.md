@@ -4,7 +4,7 @@ Haier Aircoditioning Logger is added to GitHub for contributors to get to know h
 Hardware used:
 * Unit: Haier Tundra 2.0 Single-split Airconditioning set - 5,0 kW
 * Wifi: Official Haier USB Wi-Fi module (KZW-W002, Firmware R_1.0.00/e_2.3.12)
-* It DOESN'T work anymore with Firmware R_1.0.00/2.5.14! 🤬🤬🤬
+* It DOESN'T work anymore with Firmware R_1.0.00/2.5.14! 🤬🤬🤬 (🖕 Haier)
 
 ## Currently
 
