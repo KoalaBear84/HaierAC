@@ -38,6 +38,7 @@ If you can help in any way, even just let it run and gather state changes could 
 
 ## Other resources
 
+* https://github.com/albetaCOM/esphaier (esp, works on newest firmware)
 * https://github.com/instalator/Haier_WiFi/ (Blog: https://blog.instalator.ru/archives/433)
   https://github.com/instalator/Haier_WiFi/blob/master/mqtt_esp8266_haier.ino
 * https://github.com/bstuff/haier-ac-remote
