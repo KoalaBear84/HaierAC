@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
@@ -17,6 +18,7 @@ namespace HaierAC
         static readonly object LogLock = new object();
 
         static HaierResponse LastResponse { get; set; }
+        static int Sequence { get; set; }
 
         static void Log(string message)
         {
@@ -50,6 +52,56 @@ namespace HaierAC
                 Console.ReadKey(intercept: true);
                 return;
             }
+
+            bool running = true;
+
+            try
+            {
+                Console.WriteLine("Connecting..");
+
+                Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+                IPAddress ipAddress = IPAddress.Parse(haierConfiguration.IpAddress);
+                IPEndPoint ipEndpoint = new IPEndPoint(ipAddress, haierConfiguration.Port);
+                socket.Connect(ipEndpoint);
+
+                Console.WriteLine("Connected");
+
+                Decoder decoder = Encoding.UTF8.GetDecoder();
+                bool initialized = false;
+
+                while (running)
+                {
+                    if (!initialized)
+                    {
+                        SendMessage(haierConfiguration, socket, Commands.Hello);
+                        SendMessage(haierConfiguration, socket, Commands.Init);
+                        SendMessage(haierConfiguration, socket, Commands.On);
+
+                        initialized = true;
+                    }
+
+                    byte[] buffer = new byte[1024];
+                    int iRx = socket.Receive(buffer);
+
+                    if (iRx > 0)
+                    {
+                        char[] chars = new char[iRx];
+
+                        int charLen = decoder.GetChars(buffer, 0, iRx, chars, 0);
+                        string recv = new string(chars);
+
+                        Console.WriteLine(recv);
+                    }
+                }
+
+                socket.Close();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
+
+            Console.WriteLine("DONE!");
 
             AsyncTcpClient asyncTcpClient = new AsyncTcpClient
             {
@@ -157,6 +209,41 @@ namespace HaierAC
 
             Log("Finished!");
             Console.ReadKey(intercept: true);
+        }
+
+        private static void SendMessage(HaierConfiguration haierConfiguration, Socket socket, string command)
+        {
+            Console.WriteLine($"Send command: {command}");
+            IncreaseSequence();
+
+            string commandWithSeq =
+                Commands.Request +
+                Commands.Zero16 +
+                Commands.Zero16 +
+                haierConfiguration.MacAddress.Replace(":", string.Empty) +
+                Commands.Zero16 +
+                OrderByte(Sequence) +
+                Len4(command) +
+                command;
+
+            string message = commandWithSeq.Replace(" ", string.Empty);
+
+            Console.WriteLine($"Send message: {message}");
+            socket.Send(Encoding.ASCII.GetBytes(message));
+        }
+
+        private static string Len4(string command)
+        {
+            int length = command.Replace(" ", string.Empty).Length / 2;
+            return OrderByte(length);
+        }
+
+        private static string OrderByte(int sequence) => sequence % 256 < 16 ? $"00 00 00 0{(sequence % 256).ToString().ToHexString()}" : $"00 00 00 {(sequence % 256).ToString().ToHexString()}";
+
+        private static void IncreaseSequence()
+        {
+            Sequence++;
+            Sequence %= 256;
         }
 
         private static async Task SendCommandAsync(AsyncTcpClient asyncTcpClient, byte[] command)
