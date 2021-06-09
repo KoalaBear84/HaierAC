@@ -45,7 +45,7 @@ namespace HaierAC
             {
                 Console.WriteLine("No settings found in Haier.json, scanning network for Haier Airco...");
 
-                List<dynamic> results = NetworkScanner.GetAircoIPAddresses();
+                List<dynamic> results = await NetworkScanner.GetAircoIPAddressesAsync();
 
                 Console.WriteLine("Please fill in one of the found airco's in Haier.json");
                 Console.WriteLine("Press a key to exit");
