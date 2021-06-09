@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
@@ -27,48 +29,69 @@ namespace HaierAC
             return localIP;
         }
 
-        public static List<dynamic> GetAircoIPAddresses()
+        public static async Task<List<dynamic>> GetAircoIPAddressesAsync()
         {
-            string localIp = GetIPAddress();
-            string ipBase = localIp.Substring(0, localIp.LastIndexOf('.') + 1);
-
-            Console.WriteLine($"Local IP Found: {localIp}");
+            IPHostEntry ipHostEntry = Dns.GetHostEntry(Dns.GetHostName());
 
             List<dynamic> results = new List<dynamic>();
 
-            int ipsScanned = 1;
-
-            Parallel.For(1, 255, (i) =>
+            foreach (IPAddress ipAddress in ipHostEntry.AddressList)
             {
-                string ip = $"{ipBase}{i}";
-
-                using (Ping ping = new Ping())
+                if (ipAddress.AddressFamily == AddressFamily.InterNetwork)
                 {
-                    PingReply pingReply = ping.Send(ip);
+                    string localIP = ipAddress.ToString();
 
-                    if (pingReply.Status == IPStatus.Success)
+                    string ipBase = localIP.Substring(0, localIP.LastIndexOf('.') + 1);
+
+                    Console.WriteLine($"Scanning network: {localIP}");
+
+                    int ipsScanned = 0;
+
+                    int maxThreads = 100;
+                    ConcurrentQueue<int> ips = new ConcurrentQueue<int>(Enumerable.Range(1, 255));
+                    List<Task> tasks = new List<Task>();
+
+                    for (int n = 0; n < maxThreads; n++)
                     {
-                        string macAddress = GetMacAddress(ip);
-
-                        if (!string.IsNullOrWhiteSpace(macAddress))
+                        tasks.Add(Task.Run(() =>
                         {
-                            if (IsPortOpen(ip, 56800, TimeSpan.FromSeconds(10)))
+                            while (ips.TryDequeue(out int i))
                             {
-                                results.Add(new
+                                string ip = $"{ipBase}{i}";
+
+                                using (Ping ping = new Ping())
                                 {
-                                    IP = ip,
-                                    MacAddress = macAddress
-                                });
+                                    PingReply pingReply = ping.Send(ip);
 
-                                Console.WriteLine($"Found Airco: {ip}, {macAddress.Replace("-", ":").ToUpper()}");
+                                    if (pingReply.Status == IPStatus.Success)
+                                    {
+                                        string macAddress = GetMacAddress(ip);
+
+                                        if (!string.IsNullOrWhiteSpace(macAddress))
+                                        {
+                                            if (IsPortOpen(ip, 56800, TimeSpan.FromSeconds(10)))
+                                            {
+                                                results.Add(new
+                                                {
+                                                    IP = ip,
+                                                    MacAddress = macAddress
+                                                });
+
+                                                Console.WriteLine($"Found Airco: {ip}, {macAddress.Replace("-", ":").ToUpper()}");
+                                            }
+                                        }
+                                    }
+                                }
+
+                                int ipsScannedNew = Interlocked.Increment(ref ipsScanned);
+                                Console.Title = $"Haier Airco! Scanning network {ipsScannedNew}/{255} @ {ipsScannedNew / 255m * 100:F0}%";
                             }
-                        }
+                        }));
                     }
+                    
+                    await Task.WhenAll(tasks);
                 }
-
-                int ipsScannedNew = Interlocked.Increment(ref ipsScanned);
-                Console.Title = $"Haier Airco! Scanning network {ipsScannedNew}/{255} @ {ipsScannedNew / 255m * 100:F0}%";
-            });
+            }
 
             return results;
         }
