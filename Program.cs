@@ -7,6 +7,7 @@ using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Unclassified.Net;
 
@@ -61,47 +62,51 @@ namespace HaierAC
 
                 IPAddress ipAddress = IPAddress.Parse(haierConfiguration.IpAddress);
                 IPEndPoint ipEndpoint = new IPEndPoint(ipAddress, haierConfiguration.Port);
-                Socket socket = new Socket(ipEndpoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-                
-                // Client
-                socket.Connect(ipEndpoint);
 
-                // Server
-                //socket.Bind(ipEndpoint);
-                //socket.Listen(128);
-
-                Console.WriteLine("Connected");
-
-                using (NetworkStream networkStream = new NetworkStream(socket, true))
+                using (Socket socket = new Socket(ipEndpoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp))
                 {
-                    Console.WriteLine("Connected with NetworkStream");
+                    // Client
+                    socket.Connect(ipEndpoint);
 
-                    Decoder decoder = Encoding.ASCII.GetDecoder();
-                    bool initialized = false;
+                    // Server
+                    //socket.Bind(ipEndpoint);
+                    //socket.Listen(128);
 
-                    while (running)
+                    Console.WriteLine("Connected");
+
+                    using (NetworkStream networkStream = new NetworkStream(socket, true))
                     {
-                        if (!initialized)
-                        {
-                            SendMessage(haierConfiguration, networkStream, Commands.Hello);
-                            SendMessage(haierConfiguration, networkStream, Commands.Init);
-                            SendMessage(haierConfiguration, networkStream, Commands.On);
+                        Console.WriteLine("Connected with NetworkStream");
 
-                            initialized = true;
+                        Decoder decoder = Encoding.ASCII.GetDecoder();
+                        bool initialized = false;
+
+                        while (running)
+                        {
+                            if (!initialized)
+                            {
+                                SendMessage(haierConfiguration, networkStream, Commands.Hello);
+                                SendMessage(haierConfiguration, networkStream, Commands.Init);
+                                SendMessage(haierConfiguration, networkStream, Commands.On);
+
+                                initialized = true;
+                            }
+
+                            byte[] buffer = new byte[1024];
+                            int iRx = await networkStream.ReadAsync(buffer);
+
+                            if (iRx > 0)
+                            {
+                                char[] chars = new char[iRx];
+
+                                int charLen = decoder.GetChars(buffer, 0, iRx, chars, 0);
+                                string recv = new string(chars);
+
+                                Console.WriteLine($"Received: {recv}");
+                            }
                         }
 
-                        byte[] buffer = new byte[1024];
-                        int iRx = networkStream.Read(buffer);
-
-                        if (iRx > 0)
-                        {
-                            char[] chars = new char[iRx];
-
-                            int charLen = decoder.GetChars(buffer, 0, iRx, chars, 0);
-                            string recv = new string(chars);
-
-                            Console.WriteLine($"Received: {recv}");
-                        }
+                        networkStream.Close();
                     }
 
                     socket.Close();
@@ -222,6 +227,18 @@ namespace HaierAC
             Console.ReadKey(intercept: true);
         }
 
+        private static string ConvertMac(string macAddress)
+        {
+            StringBuilder stringBuilder = new StringBuilder();
+
+            foreach (char c in Regex.Replace(macAddress, @"/[^a-f\d]/", string.Empty, RegexOptions.IgnoreCase))
+            {
+                stringBuilder.Append(((int)c).ToString("X"));
+            }
+
+            return stringBuilder.ToString();
+        }
+
         private static void SendMessage(HaierConfiguration haierConfiguration, NetworkStream networkStream, string command)
         {
             Console.WriteLine($"Send command: {command}");
@@ -231,7 +248,8 @@ namespace HaierAC
                 Commands.Request +
                 Commands.Zero16 +
                 Commands.Zero16 +
-                haierConfiguration.MacAddress.Replace(":", string.Empty) +
+                //haierConfiguration.MacAddress.Replace(":", string.Empty) +
+                ConvertMac(haierConfiguration.MacAddress) +
                 Commands.Zero4 +
                 Commands.Zero16 +
                 OrderByte(Sequence) +
