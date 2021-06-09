@@ -59,42 +59,53 @@ namespace HaierAC
             {
                 Console.WriteLine("Connecting..");
 
-                Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
                 IPAddress ipAddress = IPAddress.Parse(haierConfiguration.IpAddress);
                 IPEndPoint ipEndpoint = new IPEndPoint(ipAddress, haierConfiguration.Port);
+                Socket socket = new Socket(ipEndpoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+                
+                // Client
                 socket.Connect(ipEndpoint);
+
+                // Server
+                //socket.Bind(ipEndpoint);
+                //socket.Listen(128);
 
                 Console.WriteLine("Connected");
 
-                Decoder decoder = Encoding.UTF8.GetDecoder();
-                bool initialized = false;
-
-                while (running)
+                using (NetworkStream networkStream = new NetworkStream(socket, true))
                 {
-                    if (!initialized)
-                    {
-                        SendMessage(haierConfiguration, socket, Commands.Hello);
-                        SendMessage(haierConfiguration, socket, Commands.Init);
-                        SendMessage(haierConfiguration, socket, Commands.On);
+                    Console.WriteLine("Connected with NetworkStream");
 
-                        initialized = true;
+                    Decoder decoder = Encoding.ASCII.GetDecoder();
+                    bool initialized = false;
+
+                    while (running)
+                    {
+                        if (!initialized)
+                        {
+                            SendMessage(haierConfiguration, networkStream, Commands.Hello);
+                            SendMessage(haierConfiguration, networkStream, Commands.Init);
+                            SendMessage(haierConfiguration, networkStream, Commands.On);
+
+                            initialized = true;
+                        }
+
+                        byte[] buffer = new byte[1024];
+                        int iRx = networkStream.Read(buffer);
+
+                        if (iRx > 0)
+                        {
+                            char[] chars = new char[iRx];
+
+                            int charLen = decoder.GetChars(buffer, 0, iRx, chars, 0);
+                            string recv = new string(chars);
+
+                            Console.WriteLine($"Received: {recv}");
+                        }
                     }
 
-                    byte[] buffer = new byte[1024];
-                    int iRx = socket.Receive(buffer);
-
-                    if (iRx > 0)
-                    {
-                        char[] chars = new char[iRx];
-
-                        int charLen = decoder.GetChars(buffer, 0, iRx, chars, 0);
-                        string recv = new string(chars);
-
-                        Console.WriteLine(recv);
-                    }
+                    socket.Close();
                 }
-
-                socket.Close();
             }
             catch (Exception e)
             {
@@ -211,7 +222,7 @@ namespace HaierAC
             Console.ReadKey(intercept: true);
         }
 
-        private static void SendMessage(HaierConfiguration haierConfiguration, Socket socket, string command)
+        private static void SendMessage(HaierConfiguration haierConfiguration, NetworkStream networkStream, string command)
         {
             Console.WriteLine($"Send command: {command}");
             IncreaseSequence();
@@ -221,6 +232,7 @@ namespace HaierAC
                 Commands.Zero16 +
                 Commands.Zero16 +
                 haierConfiguration.MacAddress.Replace(":", string.Empty) +
+                Commands.Zero4 +
                 Commands.Zero16 +
                 OrderByte(Sequence) +
                 Len4(command) +
@@ -229,7 +241,7 @@ namespace HaierAC
             string message = commandWithSeq.Replace(" ", string.Empty);
 
             Console.WriteLine($"Send message: {message}");
-            socket.Send(Encoding.ASCII.GetBytes(message));
+            networkStream.Write(Encoding.ASCII.GetBytes(message));
         }
 
         private static string Len4(string command)
@@ -238,7 +250,7 @@ namespace HaierAC
             return OrderByte(length);
         }
 
-        private static string OrderByte(int sequence) => sequence % 256 < 16 ? $"00 00 00 0{(sequence % 256).ToString().ToHexString()}" : $"00 00 00 {(sequence % 256).ToString().ToHexString()}";
+        private static string OrderByte(int number) => $"00 00 00 {(number % 256).ToString("X").PadLeft(2, '0')}";
 
         private static void IncreaseSequence()
         {
