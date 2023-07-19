@@ -1,6 +1,13 @@
 # HaierAC
 Haier Aircoditioning Logger is added to GitHub for contributors to get to know how the new (?) Haier AC firmware protocol works.
 
+## 🚨 This repository is archived, because you cannot connect to it through WiFi anymore. 🚨
+
+I've switched to using https://github.com/paveldn/haier-esphome, thanks @paveldn!
+
+See this for more info:
+https://community.home-assistant.io/t/esp-haier-haier-air-conditioner-esp-home-wemos-d1-mini/
+
 Hardware used:
 * Unit: Haier Tundra 2.0 Single-split Airconditioning set - 5,0 kW
 * Wifi: Official Haier USB Wi-Fi module (KZW-W002, Firmware R_1.0.00/e_2.3.12)
